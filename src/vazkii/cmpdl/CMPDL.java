@@ -168,7 +168,7 @@ public final class CMPDL {
 
 		Interface.setStatus("Unzipping Modpack Download");
 		log("Unzipping file");
-		ZipFile zip = new ZipFile(f);
+		ZipFile zip = new ZipFile(f.getPath());
 		zip.extractAll(retPath);
 
 		log("Done unzipping");
@@ -213,10 +213,22 @@ public final class CMPDL {
 			modsDir.mkdir();
 
 		int left = total;
-		for(Manifest.FileData f : manifest.files) {
-			left--;
+
+		manifest.files.parallelStream().forEach(f -> {
+			boolean running = true;
+			while(running) {
+				try {
+					downloadFile(f, modsDir, 0, total);
+					running = false;
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		});
+		/*for(Manifest.FileData f : manifest.files) {
 			downloadFile(f, modsDir, left, total);
-		}
+			left--;
+		}*/
 
 		log("Mod downloads complete");
 
@@ -362,17 +374,18 @@ public final class CMPDL {
 		return uri.toString();
 	}
 
-	public static void downloadFileFromURL(File f, URL url) throws IOException, FileNotFoundException {
-		if(!f.exists())
+	public static void downloadFileFromURL(File f, URL url) throws IOException{
+		if (!f.exists())
 			f.createNewFile();
 
-		try(InputStream instream = url.openStream(); FileOutputStream outStream = new FileOutputStream(f)) {
-			byte[] buff = new byte[4096];
+		InputStream instream = url.openStream();
+		FileOutputStream outStream = new FileOutputStream(f);
 
-			int i;
-			while((i = instream.read(buff)) > 0)
-				outStream.write(buff, 0, i);
-		}
+		byte[] buff = new byte[4096];
+
+		int i;
+		while ((i = instream.read(buff)) > 0)
+			outStream.write(buff, 0, i);
 	}
 
 	public static void log(String s) {
